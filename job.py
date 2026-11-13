@@ -54,9 +54,7 @@ def send_prompt(input_text, session_id):
 
     previous_data = pending_events.get(session_id)
 
-    today = datetime.now(
-        ZoneInfo("Asia/Kolkata")
-    ).strftime("%Y-%m-%d %H:%M:%S %Z")
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M:%S %Z")
 
     prmpt = f"""
     You are an event scheduling assistant.
@@ -82,7 +80,7 @@ def send_prompt(input_text, session_id):
     9. If information is missing, include "required" as an array of
        missing field names and preserve all available fields.
     10. Return ONLY a valid JSON object, without markdown or explanations.
-    11. timestamp_iso will be the ISO format of timestamp. It will be used to schedule the event in the future.
+    11. timestamp_iso will be the ISO format of timestamp. It will be used to schedule the event in the future. If the "timestamp" is missing, do not add anything in "timestamp_iso" as the two are dependent to each other and return incomplete response.
 
     Complete example:
     {{

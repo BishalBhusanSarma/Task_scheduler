@@ -1,18 +1,16 @@
-import json
-
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel
 from redis import Redis
 from rq import Queue
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from job import send_email, send_message, send_prompt
-import resend
 from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI()
-
-
+load_dotenv()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:5500"],
@@ -20,6 +18,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+ph_n = os.getenv("phone_number")
+email = os.getenv("email")
 
 redis_conn = Redis(host='localhost', port=6379, db=0)
 task_queue = Queue("task_queue", connection=redis_conn)
@@ -64,19 +65,20 @@ def read_root():
 def create_prompt_job(input_text: str, session_id: str = "b1"):
 
     res = send_prompt(input_text, session_id)
-    run_at = datetime.fromisoformat(res['data'].get('timestamp_iso'))
+    
 
     if res["status"] == "incomplete":
         return res
-
+    run_at = datetime.fromisoformat(res['data'].get('timestamp_iso'))
     if res["data"].get("reminder_option") == "SMS":
-        sm = send_message(["+919999999999"], f"*Task Created*{res['data'].get('description')} is scheduled on {res['data'].get('timestamp')} and will send via {res['data'].get('reminder_option')}.")
+        
+        sm = send_message([ph_n], f"*Task Created*{res['data'].get('description')} is scheduled on {res['data'].get('timestamp')} and will send via {res['data'].get('reminder_option')}.")
         
         
         job_sms = task_queue.enqueue_at(
                     run_at,
                     send_message,
-                    recipients=["+919999999999"],
+                    recipients=[ph_n],
                     message=f"*Reminder*\n{res['data'].get('description')} is scheduled on {res['data'].get('timestamp')} and will send via {res['data'].get('reminder_option')}.",
             )
         return {
@@ -92,11 +94,12 @@ def create_prompt_job(input_text: str, session_id: str = "b1"):
         job_email = task_queue.enqueue_at(
                     run_at,
                     send_email,
-                    to_email="add_your_email@gmail.com",
+                    to_email=email,
                     subject=res["data"].get("description"),
                     body=f"*Reminder*\n{res['data'].get('description')} is scheduled on {res['data'].get('timestamp')} and will send via {res['data'].get('reminder_option')}.",
-        sm = send_email("add_your_email@gmail.com", res["data"].get("description"), f"*Task Created* {res['data'].get('description')} is scheduled on {res['data'].get('timestamp')} and will send via {res['data'].get('reminder_option')}.")
             )
+        sm = send_email(email, res["data"].get("description"), f"*Task Created* {res['data'].get('description')} is scheduled on {res['data'].get('timestamp')} and will send via {res['data'].get('reminder_option')}.")
+        
         return {
             **res,
             "message": "Email sent successfully",

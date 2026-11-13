@@ -17,6 +17,62 @@ Built a task scheduling API that turns natural-language requests into structured
 
 **Python · FastAPI · Redis · RQ · Groq · Resend · Textbee**
 
+## Run Locally
+
+### 1. Create the environment and install dependencies
+
+From the project directory:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install fastapi uvicorn redis rq resend requests openai python-dotenv
+```
+
+### 2. Configure API keys
+
+Copy `.env.example` to `.env` and replace the placeholders with your real keys:
+
+```bash
+cp .env.example .env
+```
+
+The app needs `groq_api_key`, `resend_api_key`, and `textbee_api_key`. Email delivery also requires a sender address allowed by your Resend account. The current code uses `onboarding@resend.dev` as the sender.
+
+### 3. Start Redis
+
+On macOS with Homebrew:
+
+```bash
+brew services start redis
+```
+
+Or run `redis-server` in its own terminal and leave it running. The app connects to Redis at `localhost:6379`.
+
+### 4. Start the RQ worker with scheduling enabled
+
+In a second terminal, activate the same virtual environment and run:
+
+```bash
+source .venv/bin/activate
+rq worker task_queue --with-scheduler
+```
+
+The API enqueues jobs on `task_queue`; the scheduler option is needed to promote `enqueue_at()` reminders when their scheduled time arrives. Keep this process running.
+
+### 5. Start the API
+
+In another terminal, from the project directory:
+
+```bash
+source .venv/bin/activate
+uvicorn main:app --reload
+```
+
+The API will be available at `http://127.0.0.1:8000`. Open `http://127.0.0.1:8000/docs` to try the `POST /send_prompt/` endpoint. It accepts `input_text` as a query parameter and an optional `session_id`.
+
+The endpoint sends the task-created notification immediately and schedules the reminder for the parsed timestamp. Check the worker terminal at that time for delivery errors.
+
 ## Workflow
 
 ```text
