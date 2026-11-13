@@ -14,6 +14,7 @@ load_dotenv()
 resend.api_key = os.getenv("resend_api_key")
 groq_api_key = os.getenv("groq_api_key")
 textbee_api_key = os.getenv("textbee_api_key")
+device_id = str(os.getenv("device_id"))
 
 def send_email(to_email, subject, body):
     r = resend.Emails.send({
@@ -32,7 +33,7 @@ def send_message(recipients, message):
     'https://api.textbee.dev/api/v1/gateway/send-sms',
     headers={'x-api-key': textbee_api_key},
     json={
-        'deviceId': '6ac882b62597187c9ca7285e',
+        'deviceId': device_id,
         'recipients': recipients,
         'message': message,},
         )
